@@ -16,13 +16,13 @@ namespace ACModule
         {
             InitializeComponent();
             ACsettings = new ACSettings();
-
+            //Disabling set buttons until service started
             SetCPA.Enabled = false;
             SetVelTurn.Enabled = false;
-
+            //Disabling start/stop buttons until connected
             Start.Enabled = false;
             Stop.Enabled = false;
-
+            //Seting limits information in labels
             CPALimTxt.Text = $"[{ACsettings.CPALimit[0]},{ACsettings.CPALimit[1]}]";
             TCPALimTxt.Text = $"[{ACsettings.TCPALimit[0]},{ACsettings.TCPALimit[1]}]";
             VelLimTxt.Text = $"[{ACsettings.VelLimit[0]},{ACsettings.VelLimit[1]}]";
@@ -41,6 +41,7 @@ namespace ACModule
         {
             try
             {
+                //Sending via UDP pause service command and enabling set buttons
                 ACsettings.Resume();
                 SetCPA.Enabled = true;
                 SetVelTurn.Enabled = true;
@@ -58,9 +59,17 @@ namespace ACModule
         /// <param name="e"></param>
         private void Stop_Click(object sender, EventArgs e)
         {
-            SetCPA.Enabled = false;
-            SetVelTurn.Enabled = false;
-
+            try
+            {
+                //Sending via UDP pause service command and disabling set buttons
+                ACsettings.Pause();
+                SetCPA.Enabled = false;
+                SetVelTurn.Enabled = false;
+            }
+            catch (Exception ex)
+            {
+                ExeptionInfoDisplay($"{ex.Message}");
+            }
         }
 
         /// <summary>
@@ -72,6 +81,7 @@ namespace ACModule
         {
             try
             {
+                //Check for empty set values
                 if (string.IsNullOrEmpty(CPA.Text) || string.IsNullOrEmpty(TCPA.Text))
                     throw new ArgumentNullException($"CPA or TCPA is empty");
             }
@@ -83,9 +93,10 @@ namespace ACModule
 
             try
             {
+                //Value checking
                 ACsettings.CPAValue = ACsettings.ValueCheck(CPA.Text,"CPA");
                 ACsettings.TCPAVAalue = ACsettings.ValueCheck(TCPA.Text,"TCPA");
-
+                //Sending setting values via UDP
                 ACsettings.Set_CPA_TCPA(ACsettings.CPAValue, ACsettings.TCPAVAalue);
             }
             catch (Exception ex)
@@ -93,7 +104,7 @@ namespace ACModule
                 ExeptionInfoDisplay($"Wrong input: {ex.Message}");
                 return;
             }
-
+            //Display set value in message box
             MessageDisplay.Text = $"CPA set to {ACsettings.CPAValue}\nTCPA set to {ACsettings.TCPAVAalue}";
         }
 
@@ -107,6 +118,7 @@ namespace ACModule
 
             try
             {
+                //Check for empty set values
                 if (string.IsNullOrEmpty(Velocity.Text) || string.IsNullOrEmpty(Turn.Text))
                     throw new ArgumentNullException($"Velocity or Turn is empty");
             }
@@ -118,9 +130,10 @@ namespace ACModule
 
             try
             {
+                //Value checking
                 ACsettings.VelocityValue = ACsettings.ValueCheck(Velocity.Text,"Velocity");
                 ACsettings.TrunValue = ACsettings.ValueCheck(Turn.Text,"Turn");
-
+                //Sending setting values via UDP
                 ACsettings.Set_Vel_Turn(ACsettings.VelocityValue, ACsettings.TrunValue);
             }
             catch (Exception ex)
@@ -141,8 +154,16 @@ namespace ACModule
         {
             try
             {
-                if (!ACsettings.Connect(HostName.Text, Port.Text)) return;
-                
+                //Disable set buttons
+                SetCPA.Enabled = false;
+                SetVelTurn.Enabled = false;
+                //set up UDP connection if false disable start set buttons otherwise enable start / stop buttons
+                if (!ACsettings.Connect(HostName.Text, Port.Text))
+                {
+                    Start.Enabled = false;
+                    Stop.Enabled = false;
+                    return;
+                }
                 Start.Enabled = true;
                 Stop.Enabled = true;
             }
@@ -166,6 +187,10 @@ namespace ACModule
         #endregion
 
         #region Helper Methods
+        /// <summary>
+        /// Display exception info to user
+        /// </summary>
+        /// <param name="message">Message to display</param>
         private void ExeptionInfoDisplay(string message)
         {
             MessageDisplay.Text = $"{message}";

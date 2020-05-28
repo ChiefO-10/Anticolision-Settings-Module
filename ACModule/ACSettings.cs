@@ -94,21 +94,23 @@ namespace ACModule
         /// </summary>
         /// <returns></returns>
         public bool Connect(string hostName, string portNumber)
-
         {
             try
             {
+
                 if (string.IsNullOrEmpty(hostName) || string.IsNullOrEmpty(portNumber))
                     throw new ArgumentNullException("Host Name or Port");
 
                 int mPort;
                 if (!int.TryParse(portNumber, out mPort))
                     throw new InvalidOperationException($"Port is not a number: {portNumber}");
+
+                client?.Close();
+                client?.Dispose(); 
+
                 client = new UdpClient(mPort);
-
                 client.Connect(hostName, mPort);
-
-                Login();
+                Login(client);
 
                 return true;
             }
@@ -123,15 +125,15 @@ namespace ACModule
         /// <summary>
         /// Login helper method
         /// </summary>
-        private void Login()
+        private void Login(UdpClient Client)
         {
-            if (!client.Client.Connected)
+            if (!Client.Client.Connected)
             {
                 MessageBox.Show("No UDP connection");
                 return;
             }
             Byte[] sendBytes = Encoding.ASCII.GetBytes(Handshake);
-            client.Send(sendBytes, sendBytes.Length);
+            Client.Send(sendBytes, sendBytes.Length);
         }
 
         /// <summary>
@@ -200,7 +202,7 @@ namespace ACModule
         {
             if (!client.Client.Connected)
             {
-                //throw new InvalidOperationException("No UDP connection");
+                throw new InvalidOperationException("No UDP connection");
             }
             Byte[] sendBytes = Encoding.ASCII.GetBytes(ResumeCommand);
             client.Send(sendBytes, sendBytes.Length);
@@ -240,7 +242,6 @@ namespace ACModule
                 if (input.First() == '.') input = input.PadLeft(input.Length + 1, '0');
 
                 if (!LimitCheck(input, SettingName)) throw new ArgumentException($"{SettingName} is out of range \n     Input: {input}");
-
                 return input;
             }
             catch
@@ -253,10 +254,8 @@ namespace ACModule
         /// <summary>
         /// Checking if setting between limits
         /// </summary>
-        /// <param name="value"></param>
-        /// Value to check
-        /// <param name="VariableName"></param>
-        /// Type of value "CPA","TCPA","Velocity" or "Turn"
+        /// <param name="value">Value to check</param>
+        /// <param name="VariableName">Type of value "CPA","TCPA","Velocity" or "Turn"</param>
         /// <returns></returns>
         public bool LimitCheck(string value, string VariableName)
         {
